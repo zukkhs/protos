@@ -75,3 +75,49 @@ fn parse_whitespace<S: Stream<Item = char>>(src: &mut Cursor<S>) -> Option<()> {
 fn is_term_char(c: &char) -> bool {
     !(c.is_control() || c.is_whitespace() || *c == '(' || *c == ')')
 }
+
+#[cfg(test)]
+mod tests {
+    use super::expression::parse_expression;
+    use super::*;
+    use crate::{r, t};
+
+    #[test]
+    fn can_parse_term() {
+        let mut src = Cursor::new("term".chars().into_iter());
+        assert_eq!(parse_term(&mut src), Some(t!("term")))
+    }
+
+    #[test]
+    fn can_parse_relation() {
+        let mut src = Cursor::new("a b".chars().into_iter());
+        assert_eq!(parse_expression(&mut src), Some(r!(t!("a"), t!("b"))))
+    }
+
+    #[test]
+    fn can_parse_parenthesized_relation() {
+        let mut src = Cursor::new("(a b c)".chars().into_iter());
+        assert_eq!(
+            parse_expression(&mut src),
+            Some(r!(r!(t!("a"), t!("b")), t!("c")))
+        )
+    }
+
+    #[test]
+    fn can_parse_nested_relation() {
+        let mut src = Cursor::new("a (b (c d)) e".chars().into_iter());
+        assert_eq!(
+            parse_expression(&mut src),
+            Some(r!(r!(t!("a"), r!(t!("b"), r!(t!("c"), t!("d")))), t!("e")))
+        )
+    }
+
+    #[test]
+    fn can_parse_unicode_terms() {
+        let mut src = Cursor::new("丑丒专且丕 😂❤️👌".chars().into_iter());
+        assert_eq!(
+            parse_expression(&mut src),
+            Some(r!(t!("丑丒专且丕"), t!("😂❤️👌")))
+        )
+    }
+}
